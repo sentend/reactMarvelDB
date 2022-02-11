@@ -1,29 +1,33 @@
-class MarvelService {
-	_apiBase = 'https://gateway.marvel.com:443/v1/public/'
-	_apiKey = 'apikey=893a9b7dba2d7b81bf6c25ef2a7f0761'
-	_baseOffset = 140
+import { useHttp } from '../hooks/http.hook'
 
-	getResources = async (url) => {
-		let res = await fetch(url)
+const useMarvelService = () => {
+	const { loading, error, request, clearError } = useHttp()
 
-		if (!res.ok) {
-			throw new Error(`Could not fetch ${url}, status ${res.status}`)
-		}
+	const _apiBase = 'https://gateway.marvel.com:443/v1/public/'
+	const _apiKey = 'apikey=893a9b7dba2d7b81bf6c25ef2a7f0761'
+	const _baseOffset = 140
 
-		return await res.json()
+	const getComics = async (id) => {
+		const res = await request(`${_apiBase}comics/${id}?${_apiKey}`)
+		return _trasformComics(res.data.results[0])
 	}
 
-	getAllCharacters = async (offset = this._baseOffset) => {
-		const res = await this.getResources(`${this._apiBase}characters?limit=9&offset=${offset}&${this._apiKey}`)
-		return res.data.results.map(this._trasformCharacter)
+	const getAllComics = async (offset = _baseOffset) => {
+		const res = await request(`${_apiBase}comics?orderBy=issueNumber&limit=8&offset=${offset}&${_apiKey}`)
+		return res.data.results.map(_trasformComics)
 	}
 
-	getCharacter = async (id) => {
-		const res = await this.getResources(`${this._apiBase}characters/${id}?${this._apiKey}`)
-		return this._trasformCharacter(res.data.results[0])
+	const getAllCharacters = async (offset = _baseOffset) => {
+		const res = await request(`${_apiBase}characters?limit=9&offset=${offset}&${_apiKey}`)
+		return res.data.results.map(_trasformCharacter)
 	}
 
-	_trasformCharacter = (char) => {
+	const getCharacter = async (id) => {
+		const res = await request(`${_apiBase}characters/${id}?${_apiKey}`)
+		return _trasformCharacter(res.data.results[0])
+	}
+
+	const _trasformCharacter = (char) => {
 		return {
 			id: char.id,
 			name: char.name,
@@ -36,6 +40,21 @@ class MarvelService {
 			comics: char.comics.items,
 		}
 	}
+
+	const _trasformComics = (comics) => {
+		console.log(comics)
+		return {
+			id: comics.id,
+			title: comics.title,
+			description: comics.description,
+			pages: comics.page,
+			thumbnail: comics.thumbnail.path + '.' + comics.thumbnail.extension,
+			language: comics.textObjects[0] ? `${comics.textObjects[0].language}` : 'no information',
+			price: comics.prices[0].price ? `${comics.prices[0].price}$` : 'not available',
+		}
+	}
+
+	return { loading, error, getAllCharacters, getCharacter, clearError, getAllComics, getComics }
 }
 
-export default MarvelService
+export default useMarvelService
